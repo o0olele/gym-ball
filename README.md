@@ -16,3 +16,4 @@ A ball env build with gym
 - Download the code.
 - Change the dir name to gym-ball.
 - Install by `pip install -e gym-ball`.
+- Run `test.py` for testing.
