@@ -10,3 +10,9 @@ A ball env build with gym
 - The aim is to maximum the red ball's score, and game is over if red ball be eaten.
 
 ![ball](./img/ball.webp)
+
+## Usage
+
+- Download the code.
+- Change the dir name to gym-ball.
+- Install by `pip install -e gym-ball`.
