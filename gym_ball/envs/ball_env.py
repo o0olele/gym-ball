@@ -93,11 +93,11 @@ class BallEnv(gym.Env):
              [x, y, score, type],
              ...                ]
         '''
-        self.observation_space = spaces.Box(low=0, high=VIEWPORT_H, shape=(4, MAX_BALL_NUM), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=VIEWPORT_H, shape=(MAX_BALL_NUM, 4), dtype=np.float32)
 
         self.balls = []
 
-        self.state = np.zeros(shape=(4, MAX_BALL_NUM), dtype=np.float32)
+        self.state = np.zeros(shape=(MAX_BALL_NUM, 4), dtype=np.float32)
 
         self.reset()
 
