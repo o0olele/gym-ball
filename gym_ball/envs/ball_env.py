@@ -10,7 +10,7 @@ VIEWPORT_W = 200
 VIEWPORT_H = 200
 
 MAX_BALL_NUM = 10
-MAX_BALL_SCORE = 20
+MAX_BALL_SCORE = 200
 
 BALL_TYPE_OTHER = 0
 BALL_TYPE_SELF = 1
@@ -32,7 +32,7 @@ def CheckBound(low, high, value):
     return value
 
 class Ball():
-    def __init__(self, x: np.float32, y: np.float32, score: np.float32, way: np.int, t: np.int):
+    def __init__(self, x: np.float32, y: np.float32, score: np.float32, way: int, t: int):
         '''
             x   coordinate
             y   coordinate
@@ -42,7 +42,7 @@ class Ball():
         '''
         self.x = x
         self.y = y
-        self.s = score
+        self.s = CheckBound(0, MAX_BALL_SCORE, score)
         self.w = way * 2 * math.pi / 360.0  # angle to radius
         self.t = t
 
@@ -59,7 +59,7 @@ class Ball():
         if self.t == BALL_TYPE_SELF:
             self.w = way * 2 * math.pi / 360.0  # angle to radius
 
-        speed = 1.0 / self.s    # score to speed
+        speed = 5.0 / self.s    # score to speed
         now = time.time()       # now time
 
         self.x += math.cos(self.w) * speed * (now - self.lastupdate) * self.timescale   # speed * time = distance
@@ -83,21 +83,21 @@ class BallEnv(gym.Env):
     def __init__(self):
         self.seed()
         self.viewer = None  # render viewer
-        self.scale = 5      # render scale
+        self.scale = 2      # render scale
 
         '''
-            0~359
+            0~35
         '''
-        self.action_space = spaces.Discrete(360)
+        self.action_space = spaces.Discrete(36)
         ''' [[x, y, score, type],
              [x, y, score, type],
              ...                ]
         '''
-        self.observation_space = spaces.Box(low=0, high=VIEWPORT_H, shape=(MAX_BALL_NUM, 4), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=VIEWPORT_H, shape=(MAX_BALL_NUM * 4, ), dtype=np.float32)
 
         self.balls = []
 
-        self.state = np.zeros(shape=(MAX_BALL_NUM, 4), dtype=np.float32)
+        self.state = np.zeros((MAX_BALL_NUM * 4, ), dtype=np.float32)
 
         self.reset()
 
@@ -105,11 +105,21 @@ class BallEnv(gym.Env):
         self.balls = []
 
         # random gen other balls
+        min = MAX_BALL_SCORE
+        max = 0
         for i in range(MAX_BALL_NUM - 1):
-            self.balls.append(self.randball(BALL_TYPE_OTHER))
+            tmp = self.randball(BALL_TYPE_OTHER)
+
+            if tmp.s < min:
+                min = tmp.s
+
+            if tmp.s > max:
+                max = tmp.s
+
+            self.balls.append(tmp)
 
         # random gen self ball
-        self.selfball = self.randball(BALL_TYPE_SELF)
+        self.selfball = self.randball(BALL_TYPE_SELF, (min + max) / 2)
 
         # add to ball list
         self.balls.append(self.selfball)
@@ -117,11 +127,13 @@ class BallEnv(gym.Env):
         # update state
         self.state = np.vstack([ball.state() for (_, ball) in enumerate(self.balls)])
 
-        return self.state
+        return self.state.reshape(MAX_BALL_NUM * 4, )
 
-    def step(self, action):
+    def step(self, action: int):
         reward = 0.0
         done = False
+
+        action = 10 * action
 
         # update ball
         for _, ball in enumerate(self.balls):
@@ -155,6 +167,7 @@ class BallEnv(gym.Env):
 
                 # if self ball be eaten
                 if B_ball.t == BALL_TYPE_SELF:
+                    reward -= B_ball.s
                     done = True
 
                 # A eat B
@@ -170,11 +183,11 @@ class BallEnv(gym.Env):
 
         # generate balls to MAX_BALL_NUM
         for _, val in enumerate(_new_ball_types):
-            self.balls.append(self.randball(np.int(val)))
+            self.balls.append(self.randball(int(val)))
 
         self.state = np.vstack([ball.state() for (_, ball) in enumerate(self.balls)])
 
-        return self.state, reward, done, {}
+        return self.state.reshape(MAX_BALL_NUM * 4, ), reward, done, {}
 
     def render(self, mode='human'):
         # create viewer
@@ -201,17 +214,16 @@ class BallEnv(gym.Env):
         return
 
     @staticmethod
-    def randball(_t: np.int):
-        _b = Ball(np.random.rand(1)[0]*VIEWPORT_W, np.random.rand(1)[0]*VIEWPORT_H, np.random.rand(1)[0] * MAX_BALL_SCORE, np.int(np.random.rand(1)[0] * 360), _t)
+    def randball(_t: int, _s: float = 0):
+        if _s <= 0:
+            _s = np.random.rand(1)[0] * MAX_BALL_SCORE
+        _b = Ball(np.random.rand(1)[0]*VIEWPORT_W, np.random.rand(1)[0]*VIEWPORT_H, _s, int(np.random.rand(1)[0] * 360), _t)
         return _b
 
 
 if __name__ == '__main__':
-    # env = BallEnv()
-    #
-    # while True:
-    #     env.step(150)
-    #     env.render()
-    s = spaces.Box(low=np.array([[-1.0, -2.0], [-1.0, -2.0]]), high=np.array([[2.0, 4.0], [2.0, 4.0]]), dtype=np.float32)
-    print(s.sample())
+    env = BallEnv()
 
+    while True:
+        env.step(15)
+        env.render()
