@@ -21,6 +21,7 @@ def CheckBound(low, high, value):
         value -= (high - low)
     elif value < low:
         value += (high - low)
+    value = np.clip(value, low, high)
     return value
 
 class Ball():
@@ -30,8 +31,8 @@ class Ball():
         self.s = s
         self.w = 0
 
-        self.lastupdate = time.time()  # last update time, used to caculate ball move
-        self.timescale = 100  # time scale, used to caculate ball move
+        self.lastupdate = 0   # last update time, used to caculate ball move
+        self.timescale = 1  # time scale, used to caculate ball move
 
     def radius(self):
         return math.sqrt(self.s / math.pi)
@@ -43,13 +44,13 @@ class Ball():
         self.s += s
         self.s = np.clip(self.s, 0, MAX_BALL_SCORE)
 
-    def update(self, way):
+    def update(self, way, frame):
         raise NotImplementedError
 
 class Agent(Ball):
-    def update(self, way):
+    def update(self, way, frame):
         speed = 5.0 / self.s  # score to speed
-        now = time.time()  # now time
+        now = frame  # now time
 
         self.w = way * 2 * math.pi / 360.0  # angle to radius
 
@@ -62,7 +63,7 @@ class Agent(Ball):
         self.lastupdate = now  # update time
 
 class Food(Ball):
-    def update(self, way):
+    def update(self, way, frame):
         pass
 
 class BallEatEnv(gym.Env):
@@ -110,7 +111,7 @@ class BallEatEnv(gym.Env):
         action = action * 10
 
         self.frame += 1
-        self.agent.update(action)
+        self.agent.update(action, self.frame)
 
         radius = self.agent.radius()
         for _, food in enumerate(self.foods):
